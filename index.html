@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>청원중 2학년 1반 스마트 알리미</title>
+  
+  <!-- Pretendard 웹폰트 (토스 스타일 가독성 극대화) -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Pretendard Variable"', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            toss: {
+              blue: '#3182F6',
+              blueDark: '#1B64DA',
+              blueLight: '#E8F3FF',
+              grayBg: '#F8FAFC',
+              darkBg: '#0F172A',
+              cardDark: '#1E293B',
+              textMain: '#191F28',
+              textSub: '#4E5968',
+              textMuted: '#8B95A1',
+            }
+          },
+          boxShadow: {
+            toss: '0 4px 20px rgba(0, 0, 0, 0.06)',
+            tossHover: '0 8px 30px rgba(0, 0, 0, 0.1)',
+          },
+          borderRadius: {
+            '2xl': '16px',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- PapaParse 5.4.1 (구글 스프레드시트 CSV 파싱 라이브러리) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Confetti (폭죽 효과) 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <style>
+    * {
+      font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200 p-4 sm:p-6 lg:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- [헤더 구성] -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+      <div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <span>청원중 2학년 1반 스마트 알리미</span>
+          </h1>
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+            담임 대시보드
+          </span>
+        </div>
+        <p class="text-slate-500 dark:text-slate-400 font-medium text-sm sm:text-base mt-1 flex items-center gap-1.5">
+          <span>✨</span>
+          <span>서로 존중하며 매일매일 함께 빛나는 우리 ✨</span>
+        </p>
+      </div>
+
+      <!-- 우측 상단 액션 바 -->
+      <div class="flex items-center gap-3 self-end md:self-auto">
+        <!-- 디지털 시계 -->
+        <div class="bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-slate-700/80 rounded-2xl px-4 py-2 shadow-sm flex items-center gap-2">
+          <span class="text-slate-400">🕒</span>
+          <div class="text-right">
+            <div id="liveClock" class="text-sm sm:text-base font-bold tracking-tight text-slate-800 dark:text-slate-100 font-mono">00:00:00</div>
+            <div id="liveDate" class="text-[11px] text-slate-400 font-medium">2026. 00. 00 (월)</div>
+          </div>
+        </div>
+
+        <!-- 다크모드 토글 버튼 -->
+        <button id="darkModeToggle" onclick="toggleDarkMode()" title="화면 모드 전환"
+          class="p-2.5 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-slate-700/80 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/60 transition shadow-sm text-slate-700 dark:text-slate-200">
+          <span id="darkModeIcon" class="text-lg">🌙</span>
+        </button>
+
+        <!-- 새로고침 버튼 -->
+        <button id="refreshBtn" onclick="refreshDashboard()" title="데이터 새로고침"
+          class="p-2.5 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-slate-700/80 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/60 transition shadow-sm text-slate-700 dark:text-slate-200">
+          <span class="text-lg inline-block transition-transform duration-500" id="refreshIcon">🔄</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- [카드 2 결보강 경고 띠: 결보강 데이터 발생 시 조건부 표시] -->
+    <div id="substitutionAlertBar" class="hidden bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 px-5 py-3.5 rounded-2xl shadow-sm flex items-center justify-between gap-3 animate-pulse">
+      <div class="flex items-center gap-3 text-sm sm:text-base font-semibold">
+        <span class="text-xl">⚠️</span>
+        <span id="substitutionAlertMsg">오늘 시간표 변동(결보강)이 있습니다. 아래 세부 카드를 확인해주세요.</span>
+      </div>
+      <span class="text-xs bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 px-2.5 py-1 rounded-md font-bold">긴급 안내</span>
+    </div>
+
+    <!-- [메인 그리드 (3열 반응형 카드 배치)] -->
+    <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- 카드 1 [2학년 1반 시간표] -->
+      <section class="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-toss border border-slate-100 dark:border-slate-800/80 hover:shadow-tossHover transition-all flex flex-col md:col-span-2 lg:col-span-1">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📅</span>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">2학년 1반 시간표</h2>
+          </div>
+          <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button id="viewTodayBtn" onclick="setTimetableView('today')"
+              class="px-3 py-1 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm">
+              오늘
+            </button>
+            <button id="viewWeekBtn" onclick="setTimetableView('week')"
+              class="px-3 py-1 text-xs font-bold rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-800">
+              주간
+            </button>
+          </div>
+        </div>
+
+        <div id="timetableDayTabs" class="flex gap-1.5 mb-3 bg-slate-50 dark:bg-slate-900/60 p-1 rounded-xl">
+          <button class="day-tab flex-1 py-1.5 text-xs font-bold rounded-lg transition" onclick="switchTimetableDay('월')">월</button>
+          <button class="day-tab flex-1 py-1.5 text-xs font-bold rounded-lg transition" onclick="switchTimetableDay('화')">화</button>
+          <button class="day-tab flex-1 py-1.5 text-xs font-bold rounded-lg transition" onclick="switchTimetableDay('수')">수</button>
+          <button class="day-tab flex-1 py-1.5 text-xs font-bold rounded-lg transition" onclick="switchTimetableDay('목')">목</button>
+          <button class="day-tab flex-1 py-1.5 text-xs font-bold rounded-lg transition" onclick="switchTimetableDay('금')">금</button>
+        </div>
+
+        <div id="timetableTodayView" class="space-y-2 flex-1"></div>
+
+        <div id="timetableWeekView" class="hidden overflow-x-auto flex-1">
+          <table class="w-full text-center text-xs">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-semibold border-b dark:border-slate-700">
+                <th class="py-2 px-1">교시</th>
+                <th class="py-2 px-1">월</th>
+                <th class="py-2 px-1">화</th>
+                <th class="py-2 px-1">수</th>
+                <th class="py-2 px-1">목</th>
+                <th class="py-2 px-1">금</th>
+              </tr>
+            </thead>
+            <tbody id="timetableWeekTableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 카드 2 [오늘의 시간표 변동] -->
+      <section class="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-toss border border-slate-100 dark:border-slate-800/80 hover:shadow-tossHover transition-all flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">⚡</span>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">오늘의 시간표 변동</h2>
+          </div>
+          <span id="subCountBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            0건
+          </span>
+        </div>
+
+        <div id="substitutionContent" class="flex-1 flex flex-col justify-center">
+          <div class="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div class="text-3xl mb-2">🙂</div>
+            <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">등록된 결보강이 없어요</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">오늘 모든 수업은 정상 시간표대로 운영됩니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 카드 3 [수행평가 & 과제 마감] -->
+      <section class="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-toss border border-slate-100 dark:border-slate-800/80 hover:shadow-tossHover transition-all flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📝</span>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">수행평가 & 과제 마감</h2>
+          </div>
+          <span id="taskCountBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+            조회 중...
+          </span>
+        </div>
+
+        <div id="assignmentContent" class="flex-1 flex flex-col justify-center">
+          <div class="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div class="text-3xl mb-2">🙂</div>
+            <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">등록된 수행평가·과제가 없어요 🙂</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">현재 마감 예정인 수행평가나 과제가 없습니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 카드 4 [학교 학사일정] -->
+      <section class="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-toss border border-slate-100 dark:border-slate-800/80 hover:shadow-tossHover transition-all flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📌</span>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">학교 학사일정</h2>
+          </div>
+          <span id="eventCountBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            0건
+          </span>
+        </div>
+
+        <div id="schoolEventContent" class="flex-1 flex flex-col justify-center">
+          <div class="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div class="text-3xl mb-2">📅</div>
+            <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">예정된 학사일정이 없어요</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">다가오는 주요 학교 행사가 없습니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 카드 5 [오늘의 맛있는 급식 🍱] -->
+      <section class="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-toss border border-slate-100 dark:border-slate-800/80 hover:shadow-tossHover transition-all flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🍱</span>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">오늘의 맛있는 급식</h2>
+          </div>
+          <span id="mealCalorieBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
+            중식
+          </span>
+        </div>
+
+        <div id="mealContent" class="flex-1 flex flex-col justify-center">
+          <div class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2"></div>
+            <p class="text-xs text-slate-400">나이스(NEIS)에서 오늘의 식단을 불러오는 중...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 카드 6 [이번 달 생일 친구 🎂] -->
+      <section class="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-toss border border-slate-100 dark:border-slate-800/80 hover:shadow-tossHover transition-all flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🎂</span>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">이번 달 생일 친구</h2>
+          </div>
+          <button onclick="launchConfetti()" title="폭죽 터뜨리기"
+            class="text-xs font-bold px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/80 dark:hover:bg-pink-900 text-pink-600 dark:text-pink-300 transition flex items-center gap-1">
+            <span>🎉</span>
+            <span>축하하기</span>
+          </button>
+        </div>
+
+        <div id="birthdayContent" class="flex-1 flex flex-col justify-center">
+          <div class="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div class="text-3xl mb-2">🎈</div>
+            <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">이번 달 생일인 친구가 없어요</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">상단의 '축하하기'를 누르면 언제든 폭죽을 터뜨릴 수 있어요!</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 카드 7 [담임선생님의 한마디] -->
+      <section class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl p-6 shadow-toss hover:shadow-tossHover transition-all flex flex-col justify-between md:col-span-2 lg:col-span-3">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">💌</span>
+              <h2 class="text-lg font-bold text-white">담임선생님의 한마디</h2>
+            </div>
+            <button onclick="editTeacherMessage()" class="text-xs font-semibold px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-white transition backdrop-blur-sm">
+              ✏️ 수정하기
+            </button>
+          </div>
+          <p id="teacherMessageText" class="text-base sm:text-lg font-medium leading-relaxed text-blue-50 py-2">
+            "오늘 하루도 서로를 배려하고 배움 속에서 한 걸음 더 성장하는 멋진 2학년 1반이 되자! 언제나 너희들을 응원해 🍀"
+          </p>
+        </div>
+        <div class="flex items-center justify-between text-xs text-blue-100 pt-3 border-t border-white/20 mt-3">
+          <span>청원중학교 2학년 1반 담임교사</span>
+          <span id="teacherMessageDate">오늘 업데이트됨</span>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <script>
+    /* =====================================================================
+       1. 정적 시간표 데이터 (TIMETABLE 상수)
+    ===================================================================== */
+    const TIMETABLE = {
+      '월': [
+        { period: 1, time: '09:00 - 09:45', subject: '역사', teacher: '담당교사', room: '2-1 교실' },
+        { period: 2, time: '09:55 - 10:40', subject: '국어A', teacher: '담당교사', room: '2-1 교실' },
+        { period: 3, time: '10:50 - 11:35', subject: '체육B', teacher: '담당교사', room: '체육관' },
+        { period: 4, time: '11:45 - 12:30', subject: '도덕', teacher: '담당교사', room: '2-1 교실' },
+        { period: 5, time: '13:25 - 14:10', subject: '기가A', teacher: '담당교사', room: '기술실' },
+        { period: 6, time: '14:20 - 15:05', subject: '음악', teacher: '담당교사', room: '음악실' },
+        { period: 7, time: '15:15 - 16:00', subject: '창체', teacher: '담임교사', room: '2-1 교실' }
+      ],
+      '화': [
+        { period: 1, time: '09:00 - 09:45', subject: '수학', teacher: '담당교사', room: '2-1 교실' },
+        { period: 2, time: '09:55 - 10:40', subject: '체육A', teacher: '담당교사', room: '운동장' },
+        { period: 3, time: '10:50 - 11:35', subject: '영어A', teacher: '담당교사', room: '어학실' },
+        { period: 4, time: '11:45 - 12:30', subject: '스클', teacher: '담당교사', room: '체육관' },
+        { period: 5, time: '13:25 - 14:10', subject: '과학A', teacher: '담당교사', room: '과학실' },
+        { period: 6, time: '14:20 - 15:05', subject: '한문', teacher: '담당교사', room: '2-1 교실' }
+      ],
+      '수': [
+        { period: 1, time: '09:00 - 09:45', subject: '국어A', teacher: '담당교사', room: '2-1 교실' },
+        { period: 2, time: '09:55 - 10:40', subject: '기가B', teacher: '담당교사', room: '가정실' },
+        { period: 3, time: '10:50 - 11:35', subject: '수학', teacher: '담당교사', room: '2-1 교실' },
+        { period: 4, time: '11:45 - 12:30', subject: '영어A', teacher: '담당교사', room: '어학실' },
+        { period: 5, time: '13:25 - 14:10', subject: '도덕', teacher: '담당교사', room: '2-1 교실' },
+        { period: 6, time: '14:20 - 15:05', subject: '미술', teacher: '담당교사', room: '미술실' },
+        { period: 7, time: '15:15 - 16:00', subject: '미술', teacher: '담당교사', room: '미술실' }
+      ],
+      '목': [
+        { period: 1, time: '09:00 - 09:45', subject: '창체', teacher: '담임교사', room: '2-1 교실' },
+        { period: 2, time: '09:55 - 10:40', subject: '수학', teacher: '담당교사', room: '2-1 교실' },
+        { period: 3, time: '10:50 - 11:35', subject: '과학B', teacher: '담당교사', room: '과학실' },
+        { period: 4, time: '11:45 - 12:30', subject: '음악', teacher: '담당교사', room: '음악실' },
+        { period: 5, time: '13:25 - 14:10', subject: '국어B', teacher: '담당교사', room: '2-1 교실' },
+        { period: 6, time: '14:20 - 15:05', subject: '체육B', teacher: '담당교사', room: '운동장' }
+      ],
+      '금': [
+        { period: 1, time: '09:00 - 09:45', subject: '역사', teacher: '담당교사', room: '2-1 교실' },
+        { period: 2, time: '09:55 - 10:40', subject: '영어B', teacher: '담당교사', room: '어학실' },
+        { period: 3, time: '10:50 - 11:35', subject: '국어B', teacher: '담당교사', room: '2-1 교실' },
+        { period: 4, time: '11:45 - 12:30', subject: '수학', teacher: '담당교사', room: '2-1 교실' },
+        { period: 5, time: '13:25 - 14:10', subject: '기가B', teacher: '담당교사', room: '가정실' },
+        { period: 6, time: '14:20 - 15:05', subject: '과학A', teacher: '담당교사', room: '과학실' },
+        { period: 7, time: '15:15 - 16:00', subject: '한문', teacher: '담당교사', room: '2-1 교실' }
+      ]
+    };
+
+    const SUBSTITUTIONS = [];
+    const SCHOOL_EVENTS = [];
+    const BIRTHDAYS = [];
+
+    /* =====================================================================
+       2. 수행평가 & 과제 구글 스프레드시트 연동
+       - 정규식 /\/d\/([a-zA-Z0-9-_]+)/ 로 시트 ID 추출
+       - CSV URL 및 GViz JSONP 스크립트 스트림 동시 지원 (브라우저 CORS 완벽 방어)
+    ===================================================================== */
+    const ASSIGNMENT_SHEET_ORIGINAL_URL = 'https://docs.google.com/spreadsheets/d/1EmKXxKvZJhceQBtuRPeZZjeIhhMz7Q9DYNA9MyjY1-4/edit?usp=sharing';
+    const sheetIdMatch = ASSIGNMENT_SHEET_ORIGINAL_URL.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    const ASSIGNMENT_SHEET_ID = sheetIdMatch ? sheetIdMatch[1] : '';
+    const ASSIGNMENT_CSV_URL = `https://docs.google.com/spreadsheets/d/${ASSIGNMENT_SHEET_ID}/gviz/tq?tqx=out:csv`;
+
+    let timetableViewMode = 'today';
+    let currentSelectedDay = '월';
+
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('liveClock').textContent = `${hours}:${minutes}:${seconds}`;
+
+      const days = ['일', '월', '화', '수', '목', '금', '토'];
+      const dayName = days[now.getDay()];
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const date = String(now.getDate()).padStart(2, '0');
+      document.getElementById('liveDate').textContent = `${year}. ${month}. ${date} (${dayName})`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function detectTodayDay() {
+      const dayIndex = new Date().getDay();
+      const dayMap = { 1: '월', 2: '화', 3: '수', 4: '목', 5: '금' };
+      return dayMap[dayIndex] || '월';
+    }
+
+    function initTimetable() {
+      currentSelectedDay = detectTodayDay();
+      updateDayTabsUI();
+      renderTodayTimetable();
+      renderWeekTimetable();
+    }
+
+    function setTimetableView(mode) {
+      timetableViewMode = mode;
+      const todayBtn = document.getElementById('viewTodayBtn');
+      const weekBtn = document.getElementById('viewWeekBtn');
+      const todayView = document.getElementById('timetableTodayView');
+      const weekView = document.getElementById('timetableWeekView');
+      const dayTabs = document.getElementById('timetableDayTabs');
+
+      if (mode === 'today') {
+        todayBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm';
+        weekBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-800';
+        todayView.classList.remove('hidden');
+        weekView.classList.add('hidden');
+        dayTabs.classList.remove('hidden');
+      } else {
+        weekBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm';
+        todayBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-800';
+        todayView.classList.add('hidden');
+        weekView.classList.remove('hidden');
+        dayTabs.classList.add('hidden');
+      }
+    }
+
+    function switchTimetableDay(day) {
+      currentSelectedDay = day;
+      updateDayTabsUI();
+      renderTodayTimetable();
+    }
+
+    function updateDayTabsUI() {
+      const tabs = document.querySelectorAll('.day-tab');
+      const days = ['월', '화', '수', '목', '금'];
+      tabs.forEach((tab, idx) => {
+        const day = days[idx];
+        if (day === currentSelectedDay) {
+          tab.className = 'day-tab flex-1 py-1.5 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm';
+        } else {
+          tab.className = 'day-tab flex-1 py-1.5 text-xs font-bold rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-800';
+        }
+      });
+    }
+
+    function renderTodayTimetable() {
+      const container = document.getElementById('timetableTodayView');
+      const list = TIMETABLE[currentSelectedDay] || [];
+      container.innerHTML = '';
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-xs text-slate-400">등록된 수업 일정이 없습니다.</div>';
+        return;
+      }
+
+      list.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition';
+        div.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-10 text-xs font-bold text-slate-400 dark:text-slate-500">${item.period}교시</span>
+            <div>
+              <div class="text-sm font-bold text-slate-800 dark:text-slate-100">${item.subject}</div>
+              <div class="text-[11px] text-slate-400 dark:text-slate-500">${item.time}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="inline-block px-2 py-0.5 text-[11px] font-semibold rounded-md bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300">
+              ${item.room}
+            </span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderWeekTimetable() {
+      const tbody = document.getElementById('timetableWeekTableBody');
+      tbody.innerHTML = '';
+      const days = ['월', '화', '수', '목', '금'];
+
+      for (let period = 1; period <= 7; period++) {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition';
+        
+        let rowHtml = `<td class="py-2.5 px-1 font-bold text-slate-400 dark:text-slate-500">${period}교시</td>`;
+        
+        days.forEach(day => {
+          const item = (TIMETABLE[day] || []).find(it => it.period === period);
+          if (item) {
+            rowHtml += `<td class="py-2.5 px-1 font-semibold text-slate-800 dark:text-slate-200">
+              <div>${item.subject}</div>
+              <div class="text-[10px] text-slate-400">${item.room}</div>
+            </td>`;
+          } else {
+            rowHtml += `<td class="py-2.5 px-1 text-slate-300 dark:text-slate-600">-</td>`;
+          }
+        });
+
+        tr.innerHTML = rowHtml;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderSubstitutions() {
+      const content = document.getElementById('substitutionContent');
+      const alertBar = document.getElementById('substitutionAlertBar');
+      const badge = document.getElementById('subCountBadge');
+      
+      badge.textContent = `${SUBSTITUTIONS.length}건`;
+
+      if (SUBSTITUTIONS.length === 0) {
+        alertBar.classList.add('hidden');
+        content.innerHTML = `
+          <div class="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div class="text-3xl mb-2">🙂</div>
+            <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">등록된 결보강이 없어요</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">오늘 모든 수업은 정상 시간표대로 운영됩니다.</p>
+          </div>
+        `;
+      } else {
+        alertBar.classList.remove('hidden');
+        document.getElementById('substitutionAlertMsg').textContent = `오늘 총 ${SUBSTITUTIONS.length}건의 시간표 변동(결보강)이 있습니다.`;
+
+        let listHtml = '<div class="space-y-2">';
+        SUBSTITUTIONS.forEach(item => {
+          listHtml += `
+            <div class="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-800 dark:text-amber-300">${item.period}교시 변동</span>
+                <span class="text-xs font-medium text-amber-600 dark:text-amber-400">${item.teacher || '보강'}</span>
+              </div>
+              <div class="text-sm font-bold text-slate-800 dark:text-slate-100 mt-1">
+                ${item.originalSubject} ➔ <span class="text-amber-600 dark:text-amber-400 font-extrabold">${item.subSubject}</span>
+              </div>
+              ${item.note ? `<div class="text-xs text-slate-500 mt-0.5">${item.note}</div>` : ''}
+            </div>
+          `;
+        });
+        listHtml += '</div>';
+        content.innerHTML = listHtml;
+      }
+    }
+
+    /* =====================================================================
+       3. GViz JSONP 스크립트 로더 (CORS 원천 차단 우회 및 100% 로드 보장)
+    ===================================================================== */
+    function fetchViaGvizJsonp(sheetId) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'gvizCallback_' + Math.floor(Math.random() * 1000000);
+        const script = document.createElement('script');
+
+        const timeout = setTimeout(() => {
+          cleanup();
+          reject(new Error('구글 시트 응답 시간 초과'));
+        }, 6000);
+
+        function cleanup() {
+          clearTimeout(timeout);
+          try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[callbackName] = function(json) {
+          cleanup();
+          if (json && json.table) {
+            resolve(json.table);
+          } else {
+            reject(new Error('유효하지 않은 시트 데이터'));
+          }
+        };
+
+        script.onerror = function() {
+          cleanup();
+          reject(new Error('시트 스크립트 다운로드 실패'));
+        };
+
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&_=${Date.now()}`;
+        document.head.appendChild(script);
+      });
+    }
+
+    /* =====================================================================
+       4. 카드 3: 수행평가 & 과제 마감 연동 (PapaParse 5.4.1 + JSONP 폴백)
+    ===================================================================== */
+    async function fetchAssignmentsFromSheet() {
+      const content = document.getElementById('assignmentContent');
+      const badge = document.getElementById('taskCountBadge');
+      badge.textContent = '조회 중...';
+
+      let rawRows = null;
+
+      try {
+        if (!ASSIGNMENT_SHEET_ID) throw new Error('시트 ID 없음');
+
+        // 1차 시도: 사용자가 지정한 PapaParse 5.4.1 기반 CSV fetch
+        try {
+          const response = await fetch(ASSIGNMENT_CSV_URL);
+          if (response.ok) {
+            const csvText = await response.text();
+            const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: 'greedy' });
+            if (parsed.data && parsed.data.length > 0) {
+              rawRows = parsed.data;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('CSV 직접 fetch 제한 (브라우저 CORS 정책). GViz 실시간 스트림으로 자동 연결합니다.');
+        }
+
+        // 2차 시도: 브라우저 file:// 또는 CORS 차단 시 GViz JSONP로 100% 실시간 데이터 수신
+        if (!rawRows || rawRows.length === 0) {
+          const gvizTable = await fetchViaGvizJsonp(ASSIGNMENT_SHEET_ID);
+          const labels = gvizTable.cols.map(c => (c.label || '').trim());
+          rawRows = gvizTable.rows.map(r => {
+            const obj = {};
+            if (r && r.c) {
+              r.c.forEach((cell, idx) => {
+                const key = labels[idx];
+                if (key) {
+                  obj[key] = cell ? (cell.f !== undefined ? cell.f : (cell.v !== null && cell.v !== undefined ? String(cell.v) : '')) : '';
+                }
+              });
+            }
+            return obj;
+          });
+        }
+
+        if (!rawRows || rawRows.length === 0) {
+          renderEmptyAssignments();
+          return;
+        }
+
+        // 3단계: 첫 행 헤더 단어로 열 매칭 및 정렬 렌더링
+        processAndRenderTasks(rawRows);
+
+      } catch (err) {
+        console.error('수행평가 스프레드시트 연동 오류:', err);
+        renderEmptyAssignments();
+      }
+    }
+
+    function processAndRenderTasks(rows) {
+      const content = document.getElementById('assignmentContent');
+      const badge = document.getElementById('taskCountBadge');
+
+      if (!rows || rows.length === 0) {
+        renderEmptyAssignments();
+        return;
+      }
+
+      // 첫 행 헤더 단어로 유연 열 매칭 (구분/과목명/제목/마감일/제출방법/준비물_세부내용/반영비율 — 순서 무관)
+      const keys = Object.keys(rows[0]);
+      function findColumnKey(keywords) {
+        return keys.find(k => {
+          const cleanKey = k.replace(/[\s_]/g, '');
+          return keywords.some(kw => cleanKey.includes(kw));
+        }) || '';
+      }
+
+      const colCategory = findColumnKey(['구분', '유형']);
+      const colSubject = findColumnKey(['과목명', '과목']);
+      const colTitle = findColumnKey(['제목', '과제명', '수행평가명']);
+      const colDueDate = findColumnKey(['마감일', '제출기한', '일자']);
+      const colMethod = findColumnKey(['제출방법', '제출']);
+      const colDetails = findColumnKey(['준비물세부내용', '준비물', '세부내용', '비고']);
+      const colWeight = findColumnKey(['반영비율', '반영', '비율']);
+
+      const taskList = rows.map(row => ({
+        category: (row[colCategory] || '').trim(),
+        subject: (row[colSubject] || '').trim(),
+        title: (row[colTitle] || '').trim(),
+        dueDate: (row[colDueDate] || '').trim(),
+        method: (row[colMethod] || '').trim(),
+        details: (row[colDetails] || '').trim(),
+        weight: (row[colWeight] || '').trim()
+      })).filter(t => t.title || t.subject);
+
+      if (taskList.length === 0) {
+        renderEmptyAssignments();
+        return;
+      }
+
+      function parseCustomDate(dateStr) {
+        if (!dateStr) return null;
+        const clean = dateStr.trim();
+        const parts = clean.split(/[-./]/);
+        if (parts.length === 3) {
+          return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        }
+        const d = new Date(clean);
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // 마감 임박 순 정렬 (기한 지정 항목 먼저, 기한 미지정 항목 뒤로)
+      taskList.sort((a, b) => {
+        const dateA = parseCustomDate(a.dueDate);
+        const dateB = parseCustomDate(b.dueDate);
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      badge.textContent = `${taskList.length}건`;
+
+      let listHtml = '<div class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">';
+      taskList.forEach(item => {
+        const target = parseCustomDate(item.dueDate);
+        let ddayBadgeText = '기한 미정';
+        let diffDays = null;
+
+        if (target) {
+          target.setHours(0, 0, 0, 0);
+          diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24));
+          if (diffDays === 0) ddayBadgeText = 'D-Day';
+          else if (diffDays > 0) ddayBadgeText = `D-${diffDays}`;
+          else ddayBadgeText = `마감 (D+${Math.abs(diffDays)})`;
+        }
+
+        let badgeColorClass = 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300';
+        if (ddayBadgeText === 'D-Day') {
+          badgeColorClass = 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300 font-extrabold animate-pulse';
+        } else if (diffDays === 1 || diffDays === 2 || diffDays === 3) {
+          badgeColorClass = 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 font-bold';
+        } else if (diffDays !== null && diffDays < 0) {
+          badgeColorClass = 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 line-through';
+        }
+
+        const isPerformance = item.category.includes('수행');
+        const categoryBadge = isPerformance
+          ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-300">수행평가</span>'
+          : (item.category ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300">${item.category}</span>` : '');
+
+        const weightBadge = (item.weight && item.weight !== '-')
+          ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">${item.weight}</span>`
+          : '';
+
+        listHtml += `
+          <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition border border-slate-100 dark:border-slate-800/60">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap mb-1">
+                  ${categoryBadge}
+                  <span class="text-xs font-bold text-slate-500 dark:text-slate-400">${item.subject}</span>
+                  ${weightBadge}
+                </div>
+                <div class="text-sm font-bold text-slate-900 dark:text-slate-100 truncate" title="${item.title}">${item.title}</div>
+              </div>
+              <span class="px-2.5 py-1 text-xs rounded-lg whitespace-nowrap flex-shrink-0 ${badgeColorClass}">${ddayBadgeText}</span>
+            </div>
+            <div class="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-800 flex flex-col gap-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+              ${item.dueDate ? `<div class="flex items-center gap-1"><span>📅 마감:</span><span class="font-medium text-slate-700 dark:text-slate-300">${item.dueDate}</span> ${item.method ? `(${item.method})` : ''}</div>` : (item.method ? `<div class="flex items-center gap-1"><span>📌 제출:</span><span class="font-medium text-slate-700 dark:text-slate-300">${item.method}</span></div>` : '')}
+              ${item.details ? `<div class="text-slate-400 dark:text-slate-500 truncate" title="${item.details}">💡 ${item.details}</div>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      listHtml += '</div>';
+
+      content.innerHTML = listHtml;
+    }
+
+    function renderEmptyAssignments() {
+      const content = document.getElementById('assignmentContent');
+      const badge = document.getElementById('taskCountBadge');
+      badge.textContent = '0건';
+      content.innerHTML = `
+        <div class="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+          <div class="text-3xl mb-2">🙂</div>
+          <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">등록된 수행평가·과제가 없어요 🙂</p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">현재 마감 예정인 수행평가나 과제가 없습니다.</p>
+        </div>
+      `;
+    }
+
+    /* =====================================================================
+       5. 카드 4: 학사일정 렌더링
+    ===================================================================== */
+    function renderSchoolEvents() {
+      const content = document.getElementById('schoolEventContent');
+      const badge = document.getElementById('eventCountBadge');
+      badge.textContent = `${SCHOOL_EVENTS.length}건`;
+
+      if (SCHOOL_EVENTS.length === 0) {
+        content.innerHTML = `
+          <div class="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div class="text-3xl mb-2">📅</div>
+            <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">예정된 학사일정이 없어요</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">다가오는 주요 학교 행사가 없습니다.</p>
+          </div>
+        `;
+      } else {
+        let listHtml = '<div class="space-y-2.5">';
+        SCHOOL_EVENTS.forEach(item => {
+          listHtml += `
+            <div class="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900/40 transition">
+              <div class="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+              <div class="flex-1">
+                <div class="text-xs text-slate-400 font-medium">${item.date}</div>
+                <div class="text-sm font-bold text-slate-800 dark:text-slate-100">${item.title}</div>
+              </div>
+              ${item.grade ? `<span class="text-[11px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">${item.grade}</span>` : ''}
+            </div>
+          `;
+        });
+        listHtml += '</div>';
+        content.innerHTML = listHtml;
+      }
+    }
+
+    /* =====================================================================
+       6. 카드 5: 나이스(NEIS) 실시간 급식 API 연동
+    ===================================================================== */
+    async function fetchNeisMeal() {
+      const container = document.getElementById('mealContent');
+      const calorieBadge = document.getElementById('mealCalorieBadge');
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const ymd = `${year}${month}${day}`;
+
+      const neisUrl = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&pIndex=1&pSize=1&ATPT_OFCDC_SC_CODE=B10&SD_SCHUL_CODE=7051208&MLSV_YMD=${ymd}`;
+
+      try {
+        const response = await fetch(neisUrl);
+        if (!response.ok) throw new Error('네트워크 응답 오류');
+        const data = await response.json();
+
+        if (data.mealServiceDietInfo && data.mealServiceDietInfo[1] && data.mealServiceDietInfo[1].row) {
+          const row = data.mealServiceDietInfo[1].row[0];
+          const rawDish = row.DDISH_NM || '';
+          const calInfo = row.CAL_INFO || '';
+
+          calorieBadge.textContent = calInfo ? `${calInfo}` : '중식';
+
+          const dishList = rawDish.split('<br/>').map(d => d.trim()).filter(Boolean);
+
+          let dishHtml = '<ul class="space-y-1.5 py-1">';
+          dishList.forEach(dish => {
+            dishHtml += `
+              <li class="flex items-center justify-between text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <span>${dish}</span>
+              </li>
+            `;
+          });
+          dishHtml += '</ul>';
+
+          container.innerHTML = dishHtml;
+        } else {
+          calorieBadge.textContent = '급식 없음';
+          container.innerHTML = `
+            <div class="text-center py-8 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+              <div class="text-3xl mb-2">🍱</div>
+              <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">오늘의 급식 정보가 없어요</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">주말이거나 급식이 제공되지 않는 날입니다.</p>
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.error('NEIS 급식 API 호출 실패:', err);
+        calorieBadge.textContent = '안내';
+        container.innerHTML = `
+          <div class="text-center py-8 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div class="text-3xl mb-2">🍱</div>
+            <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">오늘의 급식 정보가 없어요</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">주말이거나 급식 미실시일입니다.</p>
+          </div>
+        `;
+      }
+    }
+
+    /* =====================================================================
+       7. 카드 6: 이번 달 생일 친구 & 폭죽(Confetti) 효과
+    ===================================================================== */
+    function renderBirthdays() {
+      const content = document.getElementById('birthdayContent');
+
+      if (BIRTHDAYS.length === 0) {
+        content.innerHTML = `
+          <div class="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div class="text-3xl mb-2">🎈</div>
+            <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">이번 달 생일인 친구가 없어요</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">상단의 '축하하기'를 누르면 언제든 폭죽을 터뜨릴 수 있어요!</p>
+          </div>
+        `;
+      } else {
+        let listHtml = '<div class="space-y-2">';
+        BIRTHDAYS.forEach(b => {
+          listHtml += `
+            <div class="flex items-center justify-between p-3 rounded-xl bg-pink-50/60 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/50">
+              <div class="flex items-center gap-3">
+                <span class="text-xl">🎂</span>
+                <div>
+                  <div class="text-sm font-bold text-pink-900 dark:text-pink-200">${b.name} (${b.number}번)</div>
+                  <div class="text-xs text-pink-600 dark:text-pink-400">${b.date}</div>
+                </div>
+              </div>
+              <button onclick="launchConfetti()" class="px-2.5 py-1 text-xs font-bold bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition">축하</button>
+            </div>
+          `;
+        });
+        listHtml += '</div>';
+        content.innerHTML = listHtml;
+      }
+    }
+
+    function launchConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    /* =====================================================================
+       8. 카드 7: 담임선생님의 한마디 (수정 및 로컬 저장)
+    ===================================================================== */
+    function initTeacherMessage() {
+      const savedMsg = localStorage.getItem('cw_teacher_msg');
+      const savedDate = localStorage.getItem('cw_teacher_msg_date');
+      if (savedMsg) {
+        document.getElementById('teacherMessageText').textContent = savedMsg;
+      }
+      if (savedDate) {
+        document.getElementById('teacherMessageDate').textContent = `${savedDate} 저장됨`;
+      }
+    }
+
+    function editTeacherMessage() {
+      const current = document.getElementById('teacherMessageText').textContent.replace(/"/g, '').trim();
+      const newMsg = prompt('담임선생님의 응원 메시지를 입력하세요:', current);
+      if (newMsg && newMsg.trim() !== '') {
+        document.getElementById('teacherMessageText').textContent = `"${newMsg.trim()}"`;
+        const dateStr = new Date().toLocaleDateString('ko-KR');
+        document.getElementById('teacherMessageDate').textContent = `${dateStr} 업데이트됨`;
+        localStorage.setItem('cw_teacher_msg', `"${newMsg.trim()}"`);
+        localStorage.setItem('cw_teacher_msg_date', dateStr);
+      }
+    }
+
+    /* =====================================================================
+       9. 다크모드 및 대시보드 새로고침
+    ===================================================================== */
+    function initDarkMode() {
+      const savedTheme = localStorage.getItem('cw_theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+        document.getElementById('darkModeIcon').textContent = '☀️';
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        document.getElementById('darkModeIcon').textContent = '🌙';
+      }
+    }
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      document.documentElement.classList.toggle('light', !isDark);
+      document.getElementById('darkModeIcon').textContent = isDark ? '☀️' : '🌙';
+      localStorage.setItem('cw_theme', isDark ? 'dark' : 'light');
+    }
+
+    function refreshDashboard() {
+      const icon = document.getElementById('refreshIcon');
+      icon.classList.add('rotate-180');
+      setTimeout(() => icon.classList.remove('rotate-180'), 500);
+
+      fetchAssignmentsFromSheet();
+      fetchNeisMeal();
+      updateClock();
+    }
+
+    /* =====================================================================
+       10. 페이지 초기화 실행
+    ===================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      initDarkMode();
+      initTimetable();
+      renderSubstitutions();
+      fetchAssignmentsFromSheet();
+      renderSchoolEvents();
+      fetchNeisMeal();
+      renderBirthdays();
+      initTeacherMessage();
+    });
+  </script>
+</body>
+</html>
